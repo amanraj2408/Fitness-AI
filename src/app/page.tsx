@@ -226,7 +226,7 @@ export default function Home() {
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
         >
-          <Card className="bg-slate-900/60 border-slate-800 shadow-2xl backdrop-blur min-h-[320px]">
+          <Card className="bg-slate-900/60 border-slate-800 shadow-2xl backdrop-blur min-h-80">
             <CardHeader className="flex flex-row items-center justify-between gap-2">
               <div>
                 <CardTitle className="text-xl">Your AI Plan</CardTitle>

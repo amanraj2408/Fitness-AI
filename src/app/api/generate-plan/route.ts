@@ -1,103 +1,77 @@
+
 import { NextRequest, NextResponse } from "next/server"
 import { getOpenAI } from "@/lib/openai"
 
-type Plan = {
-  workout: string
-  diet: string
-  tips: string
-}
-
-type FormBody = {
-  name: string
-  age: string
-  gender: string
-  height: string
-  weight: string
-  goal: string
-  level: string
-  location: string
-  diet: string
-}
-
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as FormBody
-
-    const {
-      name,
-      age,
-      gender,
-      height,
-      weight,
-      goal,
-      level,
-      location,
-      diet,
-    } = body
-
-    const userSummary = `
-Name: ${name || "N/A"}
-Age: ${age || "N/A"}
-Gender: ${gender || "N/A"}
-Height: ${height || "N/A"} cm
-Weight: ${weight || "N/A"} kg
-Goal: ${goal || "N/A"}
-Level: ${level || "N/A"}
-Location: ${location || "N/A"}
-Diet: ${diet || "N/A"}
-`.trim()
+    const body = await req.json()
 
     const prompt = `
-You are an expert fitness and nutrition coach.
+You are an expert AI fitness coach.
 
-User profile:
-${userSummary}
-
-Generate JSON ONLY with this exact shape (no extra text):
+Create a JSON response only:
 
 {
-  "workout": "<html for workout>",
-  "diet": "<html for diet>",
-  "tips": "short motivational text"
+  "workout": "<html template for exercise plan>",
+  "diet": "<html template for diet plan>",
+  "tips": "string tips"
 }
 
-- workout: 7-day workout plan in HTML (headings, bullet lists, sets, reps, rest).
-- diet: 7-day diet plan in HTML (breakfast, lunch, dinner, snacks).
-- tips: 2–3 motivational sentences.
-`.trim()
+User Info:
+Name: ${body.name}
+Age: ${body.age}
+Gender: ${body.gender}
+Height: ${body.height} cm
+Weight: ${body.weight} kg
+Fitness Goal: ${body.goal}
+Level: ${body.level}
+Location: ${body.location}
+Diet Preference: ${body.diet}
+`
 
     const openai = getOpenAI()
     if (!openai) {
       return NextResponse.json(
-        { error: "OPENAI_API_KEY is not configured" },
-        { status: 500 },
+        { error: "Missing OPENAI_API_KEY" },
+        { status: 500 }
       )
     }
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4.1-mini",
-      messages: [
-        { role: "system", content: "You output only valid JSON. No explanations." },
+    const completion = await openai.responses.create({
+      model: "gpt-4o-mini",
+      input: [
+        { role: "system", content: "Return ONLY valid JSON. No explanation." },
         { role: "user", content: prompt },
       ],
-    })
+      max_output_tokens: 800,
+    }) // Responses API with small model. [web:24][web:59][web:66]
 
-    const content = completion.choices[0]?.message?.content ?? "{}"
+    const content = completion.output_text
+    console.log("OPENAI_RAW:", content)
 
-    let plan: Plan
-    try {
-      plan = JSON.parse(content) as Plan
-    } catch {
-      const jsonMatch = content.match(/\{[\s\S]*\}/)
-      plan = JSON.parse(jsonMatch?.[0] ?? "{}") as Plan
+    if (!content || !content.trim().startsWith("{")) {
+      return NextResponse.json(
+        { error: "Model did not return JSON", raw: content },
+        { status: 500 }
+      )
     }
 
-    return NextResponse.json(plan)
+    const json = JSON.parse(content)
+
+    // quick sanity check for fields your UI expects
+    if (!json.workout || !json.diet) {
+      return NextResponse.json(
+        { error: "Missing fields in JSON", raw: json },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json(json)
   } catch (error) {
-    console.error("PLAN_API_ERROR", error)
+    console.error("PLAN_API_ERROR:", error)
     return NextResponse.json(
-      { error: "Failed to generate plan" },
-      { status: 500 },
+      { error: String(error) },
+      { status: 500 }
     )
   }
 }
