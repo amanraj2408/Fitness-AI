@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { openai } from "@/lib/openai"
+import { getOpenAI } from "@/lib/openai"
 
 type Plan = {
   workout: string
@@ -7,9 +7,21 @@ type Plan = {
   tips: string
 }
 
+type FormBody = {
+  name: string
+  age: string
+  gender: string
+  height: string
+  weight: string
+  goal: string
+  level: string
+  location: string
+  diet: string
+}
+
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
+    const body = (await req.json()) as FormBody
 
     const {
       name,
@@ -21,17 +33,7 @@ export async function POST(req: NextRequest) {
       level,
       location,
       diet,
-    } = body as {
-      name: string
-      age: string
-      gender: string
-      height: string
-      weight: string
-      goal: string
-      level: string
-      location: string
-      diet: string
-    }
+    } = body
 
     const userSummary = `
 Name: ${name || "N/A"}
@@ -64,6 +66,8 @@ Generate JSON ONLY with this exact shape (no extra text):
 - tips: 2–3 motivational sentences.
 `.trim()
 
+    const openai = getOpenAI()
+
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
       messages: [
@@ -78,7 +82,6 @@ Generate JSON ONLY with this exact shape (no extra text):
     try {
       plan = JSON.parse(content) as Plan
     } catch {
-      // Fallback if model adds extra text
       const jsonMatch = content.match(/\{[\s\S]*\}/)
       plan = JSON.parse(jsonMatch?.[0] ?? "{}") as Plan
     }

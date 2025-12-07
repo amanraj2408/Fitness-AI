@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY
 const DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
-
-if (!ELEVENLABS_API_KEY) {
-  throw new Error("ELEVENLABS_API_KEY is not set in .env.local")
-}
 
 type TtsBody = {
   text: string
@@ -14,6 +9,11 @@ type TtsBody = {
 
 export async function POST(req: NextRequest) {
   try {
+    const apiKey = process.env.ELEVENLABS_API_KEY
+    if (!apiKey) {
+      throw new Error("ELEVENLABS_API_KEY is not configured")
+    }
+
     const { text, voiceId } = (await req.json()) as TtsBody
 
     if (!text || text.trim().length === 0) {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       {
         method: "POST",
         headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
+          "xi-api-key": apiKey,
           "Content-Type": "application/json",
           Accept: "audio/mpeg",
         },

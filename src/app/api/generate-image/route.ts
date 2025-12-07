@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
 import Replicate from "replicate"
 
-if (!process.env.REPLICATE_API_TOKEN) {
-  throw new Error("REPLICATE_API_TOKEN is not set in .env.local")
+type ImageBody = {
+  prompt: string
 }
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-})
 
 export async function POST(req: NextRequest) {
   try {
-    const { prompt } = (await req.json()) as { prompt: string }
+    const token = process.env.REPLICATE_API_TOKEN
+    if (!token) {
+      throw new Error("REPLICATE_API_TOKEN is not configured")
+    }
+
+    const { prompt } = (await req.json()) as ImageBody
+
+    if (!prompt || prompt.trim().length === 0) {
+      return NextResponse.json(
+        { error: "Prompt is required" },
+        { status: 400 },
+      )
+    }
+
+    const replicate = new Replicate({ auth: token })
 
     const finalPrompt = `High quality, realistic image of: ${prompt}. Fitness / food theme, well lit, professional look.`
 
+    // Replace with exact model+version from your Replicate dashboard
     const output = (await replicate.run(
-      "black-forest-labs/flux-1-schnell:YOUR_VERSION_HASH_HERE",
+      "black-forest-labs/flux-1-schnell:PUT_VERSION_HASH_HERE",
       {
-        input: {
-          prompt: finalPrompt,
-        },
+        input: { prompt: finalPrompt },
       },
     )) as string[] | string
 
