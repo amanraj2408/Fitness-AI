@@ -67,6 +67,12 @@ Generate JSON ONLY with this exact shape (no extra text):
 `.trim()
 
     const openai = getOpenAI()
+    if (!openai) {
+      return NextResponse.json(
+        { error: "OPENAI_API_KEY is not configured" },
+        { status: 500 },
+      )
+    }
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1-mini",
